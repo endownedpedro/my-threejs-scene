@@ -64,6 +64,7 @@
   #split b { position:absolute; top:50%; left:-22px; width:44px; height:44px; margin-top:-22px; border-radius:50%; background:var(--acc); border:2px solid var(--gold); cursor:ew-resize; display:flex; align-items:center; justify-content:center; font-size:15px; color:#fff; touch-action:none; }
   #split .l, #split .r { position:absolute; top:16px; font-size:10px; letter-spacing:.16em; font-weight:700; padding:4px 8px; border-radius:4px; background:rgba(42,39,36,.8); white-space:nowrap; }
   #split .l { right:12px; } #split .r { left:12px; }
+  #bar button.menu { background:var(--acc); border-color:var(--acc); color:#fff; font-weight:700; }
   #bar .sep { width:1px; background:rgba(241,238,231,.25); margin:2px 4px; }
   #bar button.ph { border-color:rgba(217,180,106,.6); color:var(--gold); }
   #bar button.ph.on { color:#fff; }
@@ -759,6 +760,11 @@ const PRESETS = [
 const bar = document.getElementById('bar');
 PRESETS.forEach(([name, fn]) => { const b = document.createElement('button'); b.textContent = name; b.onclick = () => { closePhoto(); fn(); document.querySelectorAll('#bar button').forEach(x => x.classList.remove('on')); b.classList.add('on'); }; bar.appendChild(b); });
 bar.appendChild(Object.assign(document.createElement('span'), { className: 'sep' }));
+{ const mb = document.createElement('button'); mb.className = 'menu'; mb.innerHTML = '&#8962;&nbsp;Menu'; mb.title = 'Back to the main menu'; mb.style.order = '-3';
+  mb.onclick = () => { closePhoto(); if (typeof closeFilm === 'function') closeFilm(); if (document.exitPointerLock) document.exitPointerLock(); Object.keys(keys).forEach(k => keys[k] = false);
+    document.querySelectorAll('#bar button').forEach(x => x.classList.remove('on')); const t = document.getElementById('tools'); if (t) t.classList.remove('open');
+    const i = document.getElementById('intro'); i.style.display = ''; i.scrollTop = 0; };
+  bar.prepend(mb); const sp = Object.assign(document.createElement('span'), { className: 'sep' }); sp.style.order = '-3'; mb.after(sp); }
 PHOTOS.forEach(p => { const b = document.createElement('button'); b.textContent = p.name; b.className = 'ph'; b.onclick = () => { openPhoto(p); document.querySelectorAll('#bar button').forEach(x => x.classList.remove('on')); b.classList.add('on'); }; bar.appendChild(b); });
 function setOutside(v) { outside.forEach(o => o.visible = v); ceilLabel.element.style.display = v ? '' : 'none'; }
 function enterOverview() { overview = true; ceilingGroup.visible = false; setOutside(false); document.getElementById('tCeil').classList.add('on'); document.getElementById('tCeil').textContent = 'Show ceiling'; if (document.exitPointerLock) document.exitPointerLock(); }

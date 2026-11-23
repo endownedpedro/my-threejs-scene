@@ -7,11 +7,11 @@ An interactive Three.js walkthrough of the Yin–Yang Intellectual & Social Spac
 | File | What it is |
 |---|---|
 | `index.html` | Full walkthrough for computers: real textures, ambient occlusion, bloom, photo views with a compare slider, and the walkthrough film |
-| `mobile.html` | Lightweight phone version (about 300 KB) |
+| `mobile.html` + `mobile.js` | Phone version: the 3D engine is bundled into one local script (no CDN, works on older iPhone and Android browsers), about 330 KB compressed |
 | `photo_*.jpg` | The three photoreal renders used by the phone version's photo views |
 | `walkthrough.mp4` | The 1 min 18 s photoreal walkthrough film (720p), played from both pages |
 
-Three.js 0.170 loads from the jsDelivr CDN, so the pages need an internet connection.
+The full version loads Three.js 0.170 from the jsDelivr CDN; the phone version carries its own copy in `mobile.js`. Both pages have a **Menu** button to return from the room to the welcome screen.
 
 ## Controls
 
