@@ -421,10 +421,10 @@ function deskLamp(px, py, h) { const g = new THREE.Group(); g.position.set(wx(px
   const bulb = new THREE.Mesh(new THREE.CircleGeometry(.085, 24), std({ color: '#fff3dc', emissive: '#ffcf8a', emissiveIntensity: 2.5, side: THREE.DoubleSide })); bulb.rotation.x = Math.PI / 2; bulb.position.y = .395; g.add(bulb);
   if (!(typeof LOW !== 'undefined' && LOW)) { const l = new THREE.PointLight('#ffc27a', .8, 1.6, 2); l.position.y = .3; g.add(l); } }
 // throw blanket draped over a curved sofa back (sofa circle centre ux,uy, radius R in mm, at plan angle t)
-function throwOnSofa(ux, uy, R, t, width = .62) {
+function throwOnSofa(ux, uy, R, t, width = .62, SK = 1) {
   const nW = 18, nL = 46, pos = [], uv = [], idx = [];
   const path = s => { // (radial mm, height m) along the drape: seat front -> back top -> down behind
-    const P = [[R + 300, .395], [R + 500, .405], [R + 572, .5], [R + 588, .66], [R + 650, .74], [R + 860, .745], [R + 962, .64], [R + 978, .42], [R + 982, .24]];
+    const P = [[300, .395], [500, .405], [572, .5], [588, .66], [650, .74], [860, .745], [962, .64], [978, .42], [982, .24]].map(([o, y]) => [R + o * SK, y]);
     const f = s * (P.length - 1), i = Math.min(P.length - 2, Math.floor(f)), k = f - i; return [P[i][0] + (P[i + 1][0] - P[i][0]) * k, P[i][1] + (P[i + 1][1] - P[i][1]) * k]; };
   for (let j = 0; j <= nL; j++) for (let i = 0; i <= nW; i++) { const s = j / nL, wv = (i / nW - .5) * width; const [rad, y] = path(s);
     const fold = .018 * Math.sin(wv * 22 + s * 5) * (s < .25 ? 1.4 : .6); const a = t + wv / (rad / 1000); const rr2 = rad + fold * 1000;
@@ -466,17 +466,26 @@ function decor(kind, x, y0, z) {
     [[-.05, .22], [.06, .17]].forEach(([dz, hh]) => { const f = new THREE.Mesh(new THREE.CylinderGeometry(.018, .03, hh, 12), MAT_DARKWOOD); f.position.set(0, hh / 2, dz); add(f, g); const hd = new THREE.Mesh(new THREE.SphereGeometry(.025, 14, 10), MAT_DARKWOOD); hd.scale.y = 1.3; hd.position.set(0, hh + .02, dz); add(hd, g); });
   }
 }
-// velvet shell chair (study): winged back, rolled rim, cushion, splayed walnut legs
-const GEO_SHELL = (() => { const U = 1.85, nu = 40, nv = 10, pos = [], uv = [], idx = [];
-  const top = u => { const a = Math.abs(u) / U; return a < .72 ? .40 + .1 * Math.pow(a / .72, 1.6) : .5 - .38 * (a - .72) / .28; };
-  for (let j = 0; j <= nv; j++) for (let i = 0; i <= nu; i++) { const u = -U + 2 * U * i / nu, v = j / nv, r = .25 + .045 * v;
-    pos.push(Math.sin(u) * r, .02 + v * top(u), -Math.cos(u) * r * .82 + .02); uv.push(i / nu, v); }
-  for (let j = 0; j < nv; j++) for (let i = 0; i < nu; i++) { const a = j * (nu + 1) + i, b = a + 1, c = a + nu + 1, d = c + 1; idx.push(a, b, c, b, d, c); }
+// upholstered velvet armchair (study), as in the renders: thick padded shell with pointed shoulders sweeping into rounded arms,
+// deep seat cushion, four splayed tapered walnut legs
+const CH = { R: .245, T: .07, S: .245 * 1.74 };
+CH.top = s => { const a = Math.abs(s) / CH.S; if (a < .6) return .42 + .12 * Math.pow(a / .6, 2.2); const k = (a - .6) / .4; return .54 - .38 * (k * k * (3 - 2 * k)); };
+CH.xz = (s, r) => { const t = s / CH.R; return [Math.sin(t) * r, -Math.cos(t) * r * .9 + .035]; };
+const GEO_SHELL = (() => { const nu = 64, nv = 14, pos = [], uv = [], idx = [];
+  for (const r of [CH.R, CH.R + CH.T]) { const base = pos.length / 3;
+    for (let j = 0; j <= nv; j++) for (let i = 0; i <= nu; i++) { const sv = -CH.S + 2 * CH.S * i / nu, v = j / nv, [x, z] = CH.xz(sv, r); pos.push(x, v * CH.top(sv), z); uv.push(i / nu * 2, v); }
+    for (let j = 0; j < nv; j++) for (let i = 0; i < nu; i++) { const a = base + j * (nu + 1) + i, b = a + 1, c = a + nu + 1, d = c + 1; idx.push(a, b, c, b, d, c); } }
   const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); g.setIndex(idx); g.computeVertexNormals();
-  const rim = []; for (let i = 0; i <= nu; i++) { const u = -U + 2 * U * i / nu, r = .295; rim.push(new THREE.Vector3(Math.sin(u) * r, .02 + top(u), -Math.cos(u) * r * .82 + .02)); }
-  return { shell: g, rim: new THREE.TubeGeometry(new THREE.CatmullRomCurve3(rim), 60, .02, 8, false) }; })();
-const GEO_SEAT = new RoundedBoxGeometry(.5, .09, .47, 4, .04);
-const GEO_LEG = new THREE.CylinderGeometry(.013, .02, .47, 10);
+  const path = [], rm = CH.R + CH.T / 2;                       // one rolled edge: up the left arm front, over the back, down the right arm front
+  for (let i = 0; i <= 6; i++) { const [x, z] = CH.xz(-CH.S, rm); path.push(new THREE.Vector3(x, CH.top(-CH.S) * i / 6, z)); }
+  for (let i = 1; i < 70; i++) { const sv = -CH.S + 2 * CH.S * i / 70, [x, z] = CH.xz(sv, rm); path.push(new THREE.Vector3(x, CH.top(sv), z)); }
+  for (let i = 6; i >= 0; i--) { const [x, z] = CH.xz(CH.S, rm); path.push(new THREE.Vector3(x, CH.top(CH.S) * i / 6, z)); }
+  return { shell: g, rim: new THREE.TubeGeometry(new THREE.CatmullRomCurve3(path, false, 'centripetal'), 160, CH.T / 2, 12, false) }; })();
+const GEO_SEAT = new RoundedBoxGeometry(.47, .12, .5, 5, .05);
+const velvetNap = cTex(128, 128, (g, w, h) => { const d = g.createImageData(w, h); for (let i = 0; i < w * h; i++) { const v = 118 + Math.random() * 20; d.data[i * 4] = d.data[i * 4 + 1] = d.data[i * 4 + 2] = v; d.data[i * 4 + 3] = 255; } g.putImageData(d, 0, 0); }, false);
+velvetNap.wrapS = velvetNap.wrapT = THREE.RepeatWrapping; velvetNap.repeat.set(6, 6);
+const MAT_VELVET = HQM({ color: '#42451e', roughness: .82, bumpMap: velvetNap, bumpScale: .4, sheen: 1, sheenColor: '#b9b77a', sheenRoughness: .38, side: THREE.DoubleSide });
+const GEO_LEG = new THREE.CylinderGeometry(.022, .012, .47, 12);
 
 // ---------------------------------------------------------------- shell: floor, walls, windows, door
 const floor = new THREE.Mesh(new THREE.PlaneGeometry(Wm, Dm), M.parquet);
@@ -733,13 +742,12 @@ function chair(cx, cy, angDeg, r) {
   const a = THREE.MathUtils.degToRad(angDeg);
   const x = cx + Math.cos(a) * r * 1000, y = cy + Math.sin(a) * r * 1000;
   const g = new THREE.Group(); g.position.set(wx(x), 0, wz(y)); g.rotation.y = a - Math.PI / 2; world.add(g);   // local +z faces the table centre
-  if (!chair.mat) { chair.mat = M.velvet.clone(); chair.mat.side = THREE.DoubleSide; }
-  const seat = new THREE.Mesh(GEO_SEAT, M.velvet); seat.position.set(0, .47, .02); add(seat, g);
-  const shell = new THREE.Mesh(GEO_SHELL.shell, chair.mat); shell.position.y = .44; add(shell, g);
-  const rim = new THREE.Mesh(GEO_SHELL.rim, M.velvet); rim.position.y = .44; add(rim, g);
-  const under = new THREE.Mesh(new THREE.CylinderGeometry(.2, .22, .03, 24), M.walnut); under.position.y = .425; add(under, g);
-  for (const [lx, lz] of [[-.17, -.15], [.17, -.15], [-.17, .17], [.17, .17]]) { const leg = new THREE.Mesh(GEO_LEG, M.walnut);
-    leg.position.set(lx * 1.12, .215, lz * 1.12); leg.rotation.set(-lz * .5, 0, lx * .5); add(leg, g); }
+  const seat = new THREE.Mesh(GEO_SEAT, MAT_VELVET); seat.position.set(0, .5, .045); add(seat, g);
+  const shell = new THREE.Mesh(GEO_SHELL.shell, MAT_VELVET); shell.position.y = .44; add(shell, g);
+  const rim = new THREE.Mesh(GEO_SHELL.rim, MAT_VELVET); rim.position.y = .44; add(rim, g);
+  const frame = new THREE.Mesh(new RoundedBoxGeometry(.44, .035, .42, 2, .012), M.walnut); frame.position.set(0, .43, .02); add(frame, g);
+  for (const [lx, lz] of [[-.18, -.14], [.18, -.14], [-.18, .2], [.18, .2]]) { const leg = new THREE.Mesh(GEO_LEG, M.walnut);
+    leg.position.set(lx * 1.12, .215, lz * 1.08); leg.rotation.set(-Math.sign(lz) * .2, 0, Math.sign(lx) * .2); add(leg, g); }
 }
 
 // ---------------------------------------------------------------- sofas (curved) and armchairs
@@ -750,8 +758,9 @@ function circle3(a, b, c) {
   const uy = ((ax * ax + ay * ay) * (cx - bx) + (bx * bx + by * by) * (ax - cx) + (cx * cx + cy * cy) * (bx - ax)) / d;
   return [ux, uy, Math.hypot(ax - ux, ay - uy)];
 }
+let __si = 0;
 for (const pts of DATA.sofas) {
-  const [ux, uy, R] = circle3(...pts);
+  const [ux, uy, R0] = circle3(...pts); const __so = [[-230, 850], [-150, 850]][__si++] || [0, 900]; const SK = __so[1] / 900, R = R0 + __so[0];
   let a0 = Math.atan2(pts[0][1] - uy, pts[0][0] - ux), a1 = Math.atan2(pts[2][1] - uy, pts[2][0] - ux), am = Math.atan2(pts[1][1] - uy, pts[1][0] - ux);
   // make sure the sweep passes through the middle point
   const norm = t => (t + Math.PI * 4) % (Math.PI * 2);
@@ -759,10 +768,10 @@ for (const pts of DATA.sofas) {
   if (e < s) e += Math.PI * 2;
   const ring = (r0, r1) => { const sh = new THREE.Shape(); const n = 48; for (let i = 0; i <= n; i++) { const t = s + (e - s) * i / n; const p = [Math.cos(t) * r0 / 1000, Math.sin(t) * r0 / 1000]; i ? sh.lineTo(...p) : sh.moveTo(...p); }
     for (let i = n; i >= 0; i--) { const t = s + (e - s) * i / n; sh.lineTo(Math.cos(t) * r1 / 1000, Math.sin(t) * r1 / 1000); } return sh; };
-  slab(ring(R + 60, R + 840), .08, M.charcoal, ux, uy, 0);
-  slab(ring(R, R + 660), .26, M.boucle, ux, uy, .08, 0, .03);
-  slab(ring(R + 640, R + 900), .55, M.boucle2, ux, uy, .1, 0, .05); (window.__sofas = window.__sofas || []).push([ux, uy, R, s, e]);
-  for (let i = 0; i <= 8; i++) { const t = s + (e - s) * i / 8; obstacleCircle(ux + Math.cos(t) * (R + 450), uy + Math.sin(t) * (R + 450), .42); }
+  slab(ring(R + 60 * SK, R + 840 * SK), .08, M.charcoal, ux, uy, 0);
+  slab(ring(R, R + 660 * SK), .26, M.boucle, ux, uy, .08, 0, .03);
+  slab(ring(R + 640 * SK, R + 900 * SK), .55, M.boucle2, ux, uy, .1, 0, .05); (window.__sofas = window.__sofas || []).push([ux, uy, R, s, e, SK]);
+  for (let i = 0; i <= 8; i++) { const t = s + (e - s) * i / 8; obstacleCircle(ux + Math.cos(t) * (R + 450 * SK), uy + Math.sin(t) * (R + 450 * SK), .4); }
 }
 DATA.arm.forEach(([x, y], k) => {
   const g = new THREE.Group(); g.position.set(wx(x), 0, wz(y)); g.rotation.y = k < 2 ? -Math.PI / 2 : 0; world.add(g);  // west pair face east; south pair face north
@@ -779,14 +788,14 @@ function sculpture(x, y, s = 1) {
   obstacleCircle(x, y, .25);
 }
 sculpture(...DATA.sculpt[0], .95); sculpture(...DATA.sculpt[1], 1.0);
-DATA.planters.forEach(([x, y], i) => { if (i % 3 === 1) ficusTree(x, y, rr(.95, 1.1)); else rubberPlant(x, y, rr(.9, 1.1)); });
+DATA.planters.map(([x, y]) => (x === 270 && y === 5975) ? [300, 6420] : [x, y]).forEach(([x, y], i) => { if (i % 3 === 1) ficusTree(x, y, rr(.95, 1.1)); else rubberPlant(x, y, rr(.9, 1.1)); });
 // ---------------------------------------------------------------- accessories from the renders
 DATA.study.forEach(([x, y], i) => { const h = .75; laptop(x + (i % 2 ? -230 : 230), y - 120, h, i % 2 ? 140 : -40); lantern(x - 60, y + 160, h); rattanBall(x + 120, y + 190, h, .06); });
 if (DATA.coffee[0]) laptop(DATA.coffee[0][0] + 120, DATA.coffee[0][1], .4, -(DATA.coffee[0][2] || 0) + 20);
 DATA.side.forEach(([x, y], i) => figurine(x, y, .45, i % 2 ? 1.25 : 1.05));
 laptop(950, 7560, 1.0, 180); deskLamp(380, 7600, 1.0);
 DATA.arm.forEach(([x, y]) => { const b = new THREE.Mesh(new THREE.CylinderGeometry(.42, .42, .035, 48, 1, true), M.brass); b.material = M.brass.clone(); b.material.side = THREE.DoubleSide; b.position.set(wx(x), .0175, wz(y)); add(b); });
-(window.__sofas || []).forEach(([ux, uy, R, s, e], i) => throwOnSofa(ux, uy, R, s + (e - s) * (i ? .72 : .3)));
+(window.__sofas || []).forEach(([ux, uy, R, s, e, SK], i) => throwOnSofa(ux, uy, R, s + (e - s) * (i ? .72 : .3), .62, SK));
 flushLeaves();
 
 // ---------------------------------------------------------------- lights
