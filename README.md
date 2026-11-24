@@ -23,5 +23,9 @@ The full version loads Three.js 0.170 from the jsDelivr CDN; the phone version c
 Settings → Pages → Source: **Deploy from a branch**, Branch: **main** / **(root)** → Save.
 The site then opens at `https://<your-username>.github.io/my-threejs-scene/` with no login, and the phone version at `…/my-threejs-scene/mobile.html`.
 
+## Credits
+
+Sky and distant landscape: *Rooitou Park* panorama by Greg Zaal, Poly Haven (CC0), with clouds added. Plants, furniture, accessories and trees outside are modelled in code to match the design renders.
+
 ---
 D’axis Nebular · Lokogoma, FCT, Abuja · daxisnebular@yahoo.com · +234 813 522 0509
